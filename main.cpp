@@ -1,30 +1,68 @@
-#include "gtest/gtest.h"
-#include "fs.h"
-#include "sha256.h"
+#include <unistd.h>
+#include <sys/shm.h>
+#include <iostream>
+#include <chrono>
+#include <thread>
 
-#include <fstream>
-#include <stdio.h>
+#define CHAVE 10
 
-void duplicate(std::string fsrc, std::string fdest)
+void produtor()
 {
-    std::ifstream  src(fsrc, std::ios::binary);
-    std::ofstream  dst(fdest, std::ios::binary);
+  int mem_id, *ptr_mem;
 
-    dst << src.rdbuf();
+  mem_id = shmget(CHAVE, sizeof(int) * 256, 0777 | IPC_CREAT);
+  if (mem_id < 0)
+  {
+    std::cerr << "Erro ao criar area de memoria compartilhada..." << std::endl;
+    exit(0);
+  }
+
+  ptr_mem = (int *)shmat(mem_id, nullptr, 0);
+  if (ptr_mem == nullptr)
+  {
+    std::cerr << "Erro de mapeamento de memoria..." << std::endl;
+    exit(0);
+  }
+
+  for (auto i{0}; i < 256; i++)
+  {
+    *(ptr_mem++) = i;
+  }
+  shmdt((void *)ptr_mem);
+}
+
+void consumidor()
+{
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+  int mem_id, *ptr_mem, i;
+  mem_id = shmget(CHAVE, sizeof(int) * 256, 0777 | IPC_CREAT);
+  if (mem_id < 0)
+  {
+    std::cerr << "Erro ao criar area de memoria compartilhada...\n" << std::endl;
+    exit(0);
+  }
+  ptr_mem = (int *)shmat(mem_id, 0, 0);
+  if (ptr_mem == nullptr)
+  {
+    std::cerr << "Erro de mapeamento de memoria...\n" << std::endl;
+    exit(0);
+  }
+
+  for (i = 0; i < 256; i++)
+  {
+    std::cerr << "Dados da memoria compartilhado: " << *(ptr_mem++) << std::endl;
+  }
+
+  shmdt((void *)ptr_mem);
+  shmctl(mem_id, 0, IPC_RMID); //#define IPC_RMID 0 
 }
 
 
-TEST(FsTest, case1){
-    
-    duplicate("lista.bin", "lista.bin.solucao");
-    
-    adiciona("lista.bin.solucao", "Anderson", "Everton");
-    
-    ASSERT_EQ(printSha256("lista.bin.solucao"),std::string("0A:F1:8F:E8:A6:34:9B:73:68:B1:52:66:74:71:DA:56:B3:6E:F8:96:0A:C4:F8:75:E1:C0:F1:DE:F4:5B:91:5D"));
-
-}
-
-int main(int argc, char **argv) {
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+int main()
+{
+  if (fork() > 0)
+    produtor();
+  else
+    consumidor();
 }
