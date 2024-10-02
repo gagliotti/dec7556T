@@ -21,7 +21,7 @@ if( GTEST_FOUND )
     message(STATUS "Using GTest ${GTEST_VERSION}")
 endif()
 
-add_executable(main main.cpp fs.cpp sha256.cpp)
+add_executable(main main.cpp)
 target_link_libraries(main gtest crypto pthread)
 set_target_properties(main PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
