@@ -3,66 +3,60 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <cstdlib>
+#include <sys/wait.h>
+#include <mutex>
 
-const int CHAVE = 10;
+int fd[2]{};
+int filhos[10]{};
 
-void produtor()
+std::mutex mtx;
+
+void filho()
 {
-  int mem_id = shmget(CHAVE, sizeof(int) * 256, 0777 | IPC_CREAT);
+  pid_t meuPid = getpid();
+  pid_t sorteado{};
 
-  if (mem_id < 0)
-  {
-    std::cerr << "Erro ao criar area de memoria compartilhada..." << std::endl;
-    exit(0);
-  }
+  read(fd[0], &sorteado, sizeof(pid_t));
 
-  int *ptr_mem = (int *)shmat(mem_id, nullptr, 0);
-
-  if (ptr_mem == nullptr)
-  {
-    std::cerr << "Erro de mapeamento de memoria..." << std::endl;
-    exit(0);
-  }
-
-  for (auto i{0}; i < 256; i++)
-  {
-    *(ptr_mem++) = i;
-  }
-  shmdt((void *)ptr_mem);
+  if (sorteado == meuPid)
+    std::cout << meuPid << ": fui sorteado" << std::endl;
+  else
+    std::cout << meuPid << ": não fui sorteado" << std::endl;
 }
 
-void consumidor()
+void sortear()
 {
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  pid_t sorteado = filhos[rand() % 10];
 
-  int mem_id, *ptr_mem, i;
-  mem_id = shmget(CHAVE, sizeof(int) * 256, 0777 | IPC_CREAT);
-  if (mem_id < 0)
-  {
-    std::cerr << "Erro ao criar area de memoria compartilhada...\n" << std::endl;
-    exit(0);
-  }
-  ptr_mem = (int *)shmat(mem_id, 0, 0);
-  if (ptr_mem == nullptr)
-  {
-    std::cerr << "Erro de mapeamento de memoria...\n" << std::endl;
-    exit(0);
-  }
+  for(int i{0} ; i < 10; i++)
+    write(fd[1], &sorteado, sizeof(pid_t));
 
-  for (i = 0; i < 256; i++)
-  {
-    std::cerr << "Dados da memoria compartilhado: " << *(ptr_mem++) << std::endl;
-  }
+  int status{};
 
-  shmdt((void *)ptr_mem);
-  shmctl(mem_id, 0, IPC_RMID); //#define IPC_RMID 0 
+  for(int i{0}; i< 10; i++){
+   // waitpid(filhos[i], &status, 0);
+  }
 }
-
 
 int main()
 {
-  if (fork() > 0)
-    produtor();
-  else
-    consumidor();
+
+  pipe(fd);
+
+  for (int i = 0; i < 10; i++){
+    pid_t child = fork();
+    
+    if (child == 0)
+    {
+      filho();
+      break;
+    }
+    else{
+      filhos[i] = child;
+    }
+  }
+
+  sortear();
+  
 }
