@@ -9,10 +9,11 @@
 #ifndef sha256_hpp
 #define sha256_hpp
 
-#include <stdio.h>
-#include <openssl/sha.h>
+#include <openssl/evp.h>
 #include <openssl/bio.h>
+#include <openssl/sha.h>
 #include <string>
+#include <iostream>
 
 std::string printSha256(const char *path);
 
