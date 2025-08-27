@@ -7,59 +7,37 @@
 //
 
 #include "sha256.h"
-#include <iostream>
-#include <sstream>
 
-
-std::string printSha256(const char *path){
+std::string printSha256(const char *path) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
     std::string hexHash("");
-    char hexChar[2*SHA256_DIGEST_LENGTH];
 
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    
-    unsigned int fileSize = 0;
+    EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
+    if (!mdctx) throw std::runtime_error("EVP_MD_CTX_new failed");
+
+    if (EVP_DigestInit_ex(mdctx, EVP_sha256(), nullptr) != 1)
+        throw std::runtime_error("EVP_DigestInit_ex failed");
+
     BIO* fileBio = BIO_new_file(path, "r");
-    char data;
-    
-    while(BIO_read(fileBio, &data, 1) > 0){
-        fileSize++;
-        SHA256_Update(&sha256, &data, 1);
-    }
-    
-    SHA256_Final(hash, &sha256);
-    
-    /*for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-    {
-        //printf("%.2x", hash[i]);
-        sprintf(hexChar, "%.2x", hash[i]);
-        hexHash.push_back(hexChar[0]);
-        hexHash.push_back(hexChar[1]);
-    }*/
+    if (!fileBio) throw std::runtime_error("BIO_new_file failed");
 
-    char *hexOut = OPENSSL_buf2hexstr(hash, SHA256_DIGEST_LENGTH);
+    char buf[4096];
+    int len = 0;
+    while ((len = BIO_read(fileBio, buf, sizeof(buf))) > 0) {
+        if (EVP_DigestUpdate(mdctx, buf, len) != 1)
+            throw std::runtime_error("EVP_DigestUpdate failed");
+    }
+
+    unsigned int md_len = 0;
+    if (EVP_DigestFinal_ex(mdctx, hash, &md_len) != 1)
+        throw std::runtime_error("EVP_DigestFinal_ex failed");
+
+    EVP_MD_CTX_free(mdctx);
+    BIO_free(fileBio);
+
+    char *hexOut = OPENSSL_buf2hexstr(hash, md_len);
     hexHash = std::string(hexOut);
     OPENSSL_free(hexOut);
 
-    /*std::stringstream ss;
-    for(int i = 0; i < SHA256_DIGEST_LENGTH; i++){
-        ss << std::hex << (int)hash[i];
-    }
-    hexHash = ss.str();
-    std::cout << hexHash << std::endl;
-    */
-
-   /*for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-    {
-        //printf("%.2x", hash[i]);
-        sprintf(hexChar, "%.2x", hash[i]);
-        std::string a(hexChar);
-        
-        hexHash += a;
-    }
-    */
-    
-    BIO_free(fileBio);
     return hexHash;
 }
