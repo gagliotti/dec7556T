@@ -1,8 +1,5 @@
 {
-	"build": {
-		"dockerfile": "./Dockerfile",
-		"context": "."
-	},
+	"image" : "gagliotti/devcontainer:latest",
 
 	"features": {
 		"ghcr.io/devcontainers/features/git:1": {
@@ -20,7 +17,8 @@
 			// Add the IDs of extensions you want installed when the container is created.
 			"extensions": [
 				"ms-vscode.cpptools",
-				"ms-vscode.cmake-tools"
+				"ms-vscode.cmake-tools",
+				"ms-vscode.cpptools-extension-pack"
 			]
 		}
 	},
