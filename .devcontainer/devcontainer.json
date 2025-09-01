@@ -18,7 +18,9 @@
 			"extensions": [
 				"ms-vscode.cpptools",
 				"ms-vscode.cmake-tools",
-				"ms-vscode.cpptools-extension-pack"
+				"ms-vscode.cpptools-extension-pack",
+				"ms-vscode.hexeditor",
+				"notblank00.hexeditor"
 			]
 		}
 	},
